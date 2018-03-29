@@ -1,12 +1,14 @@
 import json
-import pprint
 import time
 import datetime
 import logging
+
 from http import client as httpClient
 from http import HTTPStatus
+
 from elasticsearch_dsl.connections import connections
 from elasticsearch import Elasticsearch, helpers
+
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 
