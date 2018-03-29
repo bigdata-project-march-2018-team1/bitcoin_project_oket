@@ -8,3 +8,4 @@
   - app -> scripts python
   - db -> elasticsearch
   - view -> kibana
+
