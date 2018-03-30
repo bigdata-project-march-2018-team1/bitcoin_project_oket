@@ -1,6 +1,9 @@
 import sys, os
+
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '../src'))
-from BitcoinPriceIndex_historical import getCurrentPrice, getHistoricalPrice, createCurrentDataset, createHistoricalDataset
+
+from BitcoinPriceIndex_historical import getHistoricalPrice, createHistoricalDataset 
+from elastic_storage import createCurrentDataset, getCurrentPrice
 
 """
 To test your function, create a test function by applying wisely an assert.
