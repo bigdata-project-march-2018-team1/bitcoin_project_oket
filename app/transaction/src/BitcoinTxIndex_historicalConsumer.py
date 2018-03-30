@@ -45,10 +45,10 @@ def filter_tx(data,satochiToBitcoin=100000000):
     if data:
         for json_tx in data['tx']:
             if 'inputs' in json_tx.keys():
-                time = timestampToDate(json_tx['time'])
                 current = {}
                 current['id_tx'] = json_tx['tx_index']
-                current['date'] = time
+                current['date'] = timestampToDate(json_tx['time'])
+                current['value'] = 0
                 for json_inputs in json_tx['inputs']:
                     if 'prev_out' in json_inputs.keys():
                         current['value'] += float(json_inputs['prev_out']['value'])/satochiToBitcoin
