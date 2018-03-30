@@ -1,6 +1,4 @@
 language: python
-services:
-- docker
 python:
 - '3.5'
 install:
@@ -8,19 +6,3 @@ install:
 script:
 - echo "Test begin!!"
 - pytest app/price/test/testBPI.py
-addons:
-  ssh_known_hosts: 51.15.196.143
-before_deploy:
-- eval "$(ssh-agent -s)"
-- chmod 600 deploy_rsa
-- ssh-add deploy_rsa
-deploy:
-  skip_cleanup: true
-  provider: script
-  script: ssh devel@51.15.196.143 "sh ./deploy.sh"
-  on:
-    branch: develop
-    python: '3.5'
-before_install:
-- openssl aes-256-cbc -K $encrypted_6d11462a714f_key -iv $encrypted_6d11462a714f_iv
-  -in deploy_rsa.enc -out deploy_rsa -d
