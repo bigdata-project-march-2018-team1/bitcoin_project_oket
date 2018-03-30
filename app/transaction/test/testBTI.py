@@ -14,25 +14,24 @@ def teststringToDatetime():
     assert stringToDatetime(date) == datetime.datetime(2012, 1, 1)
 
 def testFilter_listBlocks():
-    pass
-    #listBlocks = ['blocks', [{'hash': 'unit_test'}]]
-    #assert filter_listBlocks(listBlocks) == [{'id_block': 'unit_test'}]
+    listBlocks = {'blocks': [{'hash': 'unit_test', 'time': 'time_test'}]}
+    assert filter_listBlocks(listBlocks) == [{'id_block': 'unit_test', 'time': 'time_test'}]
 
 def testFilter_tx():
     pass
-    #date = "2012-01-01"
-    #timestamp = int(time.mktime(
-    #    datetime.datetime.strptime(date, "%Y-%m-%d").timetuple()))
-    #data = {'tx':{'inputs':
-    #         [{'prev_out': {
-    #             'tx_index': 'unit_test_tx_index',
-    #             'value': 10*100000000
-    #         }}],
-    #         'time': timestamp
-    #         }}
-    #results = [{'date': date+"T00:00:00",
-    #            'id_tx': 'unit_test_tx_index',
-    #            'value': 10
-    #            }]
-    #assert filter_tx(data) == results
+    date = "2012-01-01"
+    timestamp = int(time.mktime(datetime.datetime.strptime(date, "%Y-%m-%d").timetuple()))
+    data = {'tx': [{
+        'inputs': [{
+            'prev_out': {
+                 'value': 10
+             }}],
+        'tx_index': 'unit_test_tx_index',
+        'time': timestamp
+        }]}
+    results = [{'date': date+"T00:00:00",
+                'id_tx': 'unit_test_tx_index',
+                'value': 10
+                }]
+    assert filter_tx(data) == results
 
