@@ -13,7 +13,7 @@ from elastic_storage import http_auth
 
 TIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
-def add_historical_tx(historicalDataset):
+def add_historical_tx(historicalDataset,,satochiToBitcoin=100000000):
     ''' Get data from the API between two dates '''
     ''' Call to bulk api to store the data '''
     actions = [
@@ -23,7 +23,7 @@ def add_historical_tx(historicalDataset):
             "_id": data['id_tx'],
             "_source": {
                 "type": "historical",
-                "value": data['value'],
+                "value": data['value']/satochiToBitcoin,
                 "time": {'path': data['date'], 'format': TIME_FORMAT}
             }
         }
@@ -31,7 +31,7 @@ def add_historical_tx(historicalDataset):
     ]
     helpers.bulk(connections.get_connection(), actions)
 
-def filter_tx(data,satochiToBitcoin=100000000):
+def filter_tx(data):
     """ Filter the transactions information to keep only date, value and transaction id
     
     Arguments:
@@ -51,7 +51,7 @@ def filter_tx(data,satochiToBitcoin=100000000):
                 current['value'] = 0
                 for json_inputs in json_tx['inputs']:
                     if 'prev_out' in json_inputs.keys():
-                        current['value'] += float(json_inputs['prev_out']['value'])/satochiToBitcoin
+                        current['value'] += float(json_inputs['prev_out']['value'])
                 current['value'] = current['value'] / len(json_tx['inputs'])
                 tx_filter.append(current)
     return tx_filter
