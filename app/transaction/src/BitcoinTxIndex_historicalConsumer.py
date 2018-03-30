@@ -13,7 +13,7 @@ from elastic_storage import http_auth
 
 TIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
-def add_historical_tx(historicalDataset,,satochiToBitcoin=100000000):
+def add_historical_tx(historicalDataset, satochiToBitcoin=100000000):
     ''' Get data from the API between two dates '''
     ''' Call to bulk api to store the data '''
     actions = [

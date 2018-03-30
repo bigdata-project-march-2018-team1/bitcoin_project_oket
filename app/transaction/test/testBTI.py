@@ -6,7 +6,8 @@ import datetime
 import time
 from pyspark import SparkContext
 
-from BitcoinTxIndex_historical import getListBlocks_1day, getListBlocks_2dates, stringToDatetime, filterHash_listBlocks, getList_txBlock, filter_tx
+from BitcoinTxIndex_historicalConsumer import filter_tx
+from BitcoinTxIndex_historicalProducer import getListBlocks_1day, getListBlocks_Ndays, stringToDatetime, filter_listBlocks, getList_txBlock
 
 def teststringToDatetime():
     date = "2012-01-01"
