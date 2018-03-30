@@ -2,6 +2,8 @@ version: '2.3'
 services:
     producer_tx:
         build:
+            args:
+                - PYTHON_MODULE=transaction
             context: app
         command: python3 src/BitcoinTxIndex_historicalProducer.py
         networks:
@@ -14,6 +16,8 @@ services:
         environment:
             - KAFKA_MAVEN=org.apache.spark:spark-streaming-kafka-0-8-assembly_2.11:2.3.0
         build:
+            args:
+                - PYTHON_MODULE=transaction
             context: app
         command: ['spark-submit', '--packages',  'org.apache.spark:spark-streaming-kafka-0-8-assembly_2.11:2.3.0', 'src/BitcoinTxIndex_historicalConsumer.py']
         networks:
