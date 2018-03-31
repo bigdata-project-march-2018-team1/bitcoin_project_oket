@@ -1,5 +1,6 @@
 import json
 import datetime
+import time
 import logging
 
 from http import client as httpClient
@@ -12,32 +13,33 @@ from elastic_storage import storeData, eraseData, BitCoin, http_auth, connection
 
 DEFAULT_HOST = "api.coindesk.com"
 DEFAULT_URI_DATE = "/v1/bpi/historical/close.json?currency=EUR"
+DAY_SECONDS = 86400
 
 def getHistoricalPrice(start, end, host=DEFAULT_HOST, path=DEFAULT_URI_DATE):
     """ Call the API to get all the bitcoin values between two dates
     
     Arguments:
-        start {string} -- [description]
-        end {string} -- [description]
+        start {string} -- Start date
+        end {string} -- End date
     
     Keyword Arguments:
-        host {string} -- [description] (default: {DEFAULT_HOST})
-        path {string} -- [description] (default: {DEFAULT_URI_DATE})
+        host {string} -- API host (default: {DEFAULT_HOST})
+        path {string} -- API path (default: {DEFAULT_URI_DATE})
     
     Returns:
-        json -- [description]
+        json -- Return all API's data (price, date,...)
     """
 
     return connectionToAPI(host, path+"&start="+start+"&end="+end)
 
 def createHistoricalDataset(jsonData):
-    """ Creates a list from the json data
+    """ Creates a filtered list from all API's data 
     
     Arguments:
-        jsonData {json} -- [description]
+        jsonData {json} -- Data received from the coindesk API
     
     Returns:
-        list -- [description]
+        list -- Return a list of filter day's price
     """
 
     list = []
@@ -52,8 +54,8 @@ def addHistoricalDataset(start, end):
     """ Add data from the API between two dates to Elastic
     
     Arguments:
-        start {string} -- [description]
-        end {string} -- [description]
+        start {string} -- Start date
+        end {string} -- End date
     """
 
     try:
@@ -77,10 +79,16 @@ def addHistoricalDataset(start, end):
 
 def insertHistoricalDataInBase(conf):
     ''' Initializes the connection'''
-    connections.create_connection(hosts=conf['elasticsearch']['hosts'], http_auth=http_auth(conf['elasticsearch']))
+    #TODO ou est la clef de l'auth dans config ??
+    connections.create_connection(hosts=conf['elasticsearch'], http_auth=http_auth(conf['elasticsearch']))
     ''' Puts the historical data into elasticsearch '''
     addHistoricalDataset("2010-07-17", str(datetime.date.today()))
 
 if __name__ == "__main__":
-    import config
+    from config import config
     insertHistoricalDataInBase(config)
+    while True:
+        time.sleep(DAY_SECONDS)
+        today = str(datetime.date.today())
+        addHistoricalDataset(today, today)
+        logging.info("INFO")
