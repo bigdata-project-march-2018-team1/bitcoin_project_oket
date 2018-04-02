@@ -160,7 +160,7 @@ def send_to_consumer(start,end,producer):
     for block in list_blocks:
         txs = getListTx_Block(block['id_block'])
         producer.send('test',str(txs).encode())
-        print("Send...")
+        logging.info("INFO")
     producer.close()
 
 if __name__ == "__main__":
