@@ -72,7 +72,6 @@ def getCurrentPrice(host=DEFAULT_HOST, path=DEFAULT_URI):
 
     return connectionToAPI(host, path)
 
-
 def createCurrentDataset(jsonDataStream):
     """ Creates a list from the json data
     

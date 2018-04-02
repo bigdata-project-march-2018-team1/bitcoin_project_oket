@@ -81,17 +81,19 @@ def send(rdd, config):
 
     data_tx = rdd.collect()
     if data_tx:
-        connections.create_connection(hosts='localhost', http_auth=http_auth('elastic'))
+        connections.create_connection(
+            hosts=config['elasticsearch'], http_auth=http_auth('elastic'))
         add_historical_tx(data_tx[0])
 
-def HisticalTx(master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='topic_tx', producer_host="localhost", producer_port='2181', db_host="db"): 
+def HisticalTx(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='transaction_hist', producer_host="localhost", producer_port='2181', db_host="db"): 
     """ Load data from kafka, filter and send to elastic
     
     Keyword Arguments:
+        config {dict} -- Contains Elasticsearch settings (hosts, password, ...)
         master {str} -- Master URL to connect to (default: {"local[2]"})
         appName {str} -- Application name (default: {"Historical Transaction"})
         group_id {str} -- Group id (default: {'Alone-In-The-Dark'})
-        topicName {str} -- Topic name (default: {'test'})
+        topicName {str} -- Topic name (default: {'transaction_hist'})
         producer_host {str} -- Producer host (default: {"localhost"})
         producer_port {str} -- Producer port (default: {'2181'})
         db_host {str} -- Database host (default: {"db"})
