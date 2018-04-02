@@ -1,6 +1,7 @@
 import datetime
 import ast
 import json
+import logging
 
 from pyspark import SparkContext, SparkConf
 from pyspark.streaming import StreamingContext
@@ -84,6 +85,7 @@ def send(rdd, config):
         connections.create_connection(
             hosts=config['elasticsearch'], http_auth=http_auth('elastic'))
         add_historical_tx(data_tx[0])
+        logging.info("INFO")
 
 def HisticalTx(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='transaction_hist', producer_host="localhost", producer_port='2181', db_host="db"): 
     """ Load data from kafka, filter and send to elastic
