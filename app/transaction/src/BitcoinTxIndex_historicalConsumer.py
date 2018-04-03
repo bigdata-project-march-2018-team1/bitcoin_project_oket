@@ -87,7 +87,7 @@ def send(rdd, config):
         add_historical_tx(data_tx[0])
         logging.info("INFO")
 
-def HisticalTx(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='transaction_hist', producer_host="localhost", producer_port='2181', db_host="db"): 
+def HisticalTx(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='transaction_hist', producer_host="zookeeper", producer_port='2181', db_host="db"): 
     """ Load data from kafka, filter and send to elastic
     
     Keyword Arguments:
