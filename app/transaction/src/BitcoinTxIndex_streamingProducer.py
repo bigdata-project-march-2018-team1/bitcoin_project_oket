@@ -1,6 +1,7 @@
 from kafka import KafkaProducer
 import json
 from websocket import create_connection
+import logging
 
 WEBSOCKET_URL = "ws://ws.blockchain.info/inv"
 WEBSOCKET_REQUEST = json.dumps({"op": "unconfirmed_sub"})
@@ -21,7 +22,7 @@ def produce_Tx_Index(topic):
         ws.send(WEBSOCKET_REQUEST)
         tx=ws.recv()
         producer.send(topic,tx)
-        print("Send ...")
+        logging.info("INFO")
 
 if __name__ == "__main__":
     produce_Tx_Index("transaction_str")
