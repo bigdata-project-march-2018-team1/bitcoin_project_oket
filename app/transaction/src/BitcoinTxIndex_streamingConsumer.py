@@ -20,7 +20,6 @@ def add_real_time_tx(name,realTimeData):
     Arguments:
         realTimeData { list[directories] } -- list of dictionnary
         index {string} -- name of indice of ElasticDataBase
-        es {ElasticSearch} -- Elasticsearch object
 
         Returns:
         void -- Put data to ElasticDataBase
@@ -64,7 +63,7 @@ def filtre_tx(dico):
 
     return result
 
-def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction",elasticsearch_host="localhost" ,elasticsearch_port=9200, kafkaConsumer_host="localhost",kafkaConsumer_port=2181):
+def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction", kafkaConsumer_host="zookeeper",kafkaConsumer_port=2181):
     """ Get the current information of transaction by a KafkaProducer and SparkStreaming/KafkaUtils, theses informations are send to an ElasticSearchBase.
 
     Arguments:
@@ -72,8 +71,6 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
         index {string} -- Name of index of ElasticSearchDataBase
         master {string} -- Set master URL to connect to
         appName {string} -- Set application name
-        elasticsearch_host {string} -- ElasticSearch host to connect for
-        elasticsearch_port {int} -- ElasticSearch port to connect for
         kafkaConsumer_host {string} -- kafkaStream consumer to connect for getting streamingPrice
         kafkaConsumer_port {int} -- kafkaStream port to connect for
 
@@ -83,7 +80,7 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
     sc = SparkContext(master, appName)
     strc = StreamingContext(sc, 5)
 
-    kafkaStream = KafkaUtils.createStream(strc, kafkaConsumer_host+':'+str(kafkaConsumer_port), 'SparkStreaming', {topic: 1},valueDecoder=lambda m:json.loads(m.decode('ascii')),kafkaParams = {"metadata.broker.list": 'localhost:9092'})\
+    kafkaStream = KafkaUtils.createStream(strc, kafkaConsumer_host+':'+str(kafkaConsumer_port), 'SparkStreaming', {topic: 1},valueDecoder=lambda m:json.loads(m.decode('ascii')),kafkaParams = {"metadata.broker.list": 'kafka:9092'})\
                             .map(lambda dico:filtre_tx(json.loads(dico[1])['x']))
 
     kafkaStream.foreachRDD(lambda rdd: add_real_time_tx(index,rdd.collect()))
@@ -92,5 +89,6 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
     strc.awaitTermination()
 
 if __name__ == "__main__":
-    connections.create_connection(hosts='localhost')#, http_auth=http_auth('elastic'))
+    from config import config
+    connections.create_connection(hosts=['db'], http_auth=http_auth(config['elasticsearch']))
     consume_Tx_Index('transaction_str','bitcoin_tx')
