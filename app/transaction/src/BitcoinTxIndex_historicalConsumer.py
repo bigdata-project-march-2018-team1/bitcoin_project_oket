@@ -84,22 +84,22 @@ def send(rdd, config):
         connections.create_connection(hosts='localhost', http_auth=http_auth('elastic'))
         add_historical_tx(data_tx[0])
 
-def HisticalTx(master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='topic_tx', producer_host="localhost", producer_port='2181', db_host="db"): 
+def HisticalTx(master="local[2]", app_name="Historical Transaction", group_id='Alone-In-The-Dark', topic_name='topic_tx', producer_host="localhost", producer_port='2181', db_host="db"): 
     """ Load data from kafka, filter and send to elastic
     
     Keyword Arguments:
         master {str} -- Master URL to connect to (default: {"local[2]"})
-        appName {str} -- Application name (default: {"Historical Transaction"})
+        app_name {str} -- Application name (default: {"Historical Transaction"})
         group_id {str} -- Group id (default: {'Alone-In-The-Dark'})
-        topicName {str} -- Topic name (default: {'test'})
+        topic_name {str} -- Topic name (default: {'test'})
         producer_host {str} -- Producer host (default: {"localhost"})
         producer_port {str} -- Producer port (default: {'2181'})
         db_host {str} -- Database host (default: {"db"})
     """
 
-    sc = SparkContext(master,appName)
-    ssc = StreamingContext(sc,batchDuration=5)
-    dstream = KafkaUtils.createStream(ssc,producer_host+":"+producer_port,group_id,{topicName:1},kafkaParams={"fetch.message.max.bytes":"1000000000"})\
+    sc = SparkContext(master, app_name)
+    ssc = StreamingContext(sc, batchDuration=5)
+    dstream = KafkaUtils.createStream(ssc, producer_host+":"+producer_port, group_id, {topic_name:1}, kafkaParams={"fetch.message.max.bytes":"1000000000"})\
                         .map(lambda v: ast.literal_eval(v[1]))\
                         .map(filter_tx)
     dstream.foreachRDD(lambda rdd: send(rdd, config))
@@ -109,4 +109,7 @@ def HisticalTx(master="local[2]", appName="Historical Transaction", group_id='Al
 
 if __name__ == "__main__":
     from config import config    
-    HisticalTx(config)
+    HisticalTx(
+        master=config['spark_job']['master'],
+        app_name=config['spark_job']['app_name']
+    )

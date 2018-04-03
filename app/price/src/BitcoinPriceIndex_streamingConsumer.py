@@ -1,5 +1,6 @@
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
+import logging
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
@@ -38,6 +39,7 @@ def streamingPrice(config, master="local[2]", appName="CurrentPrice" , producer_
     """
     sc = SparkContext(master, appName)
     strc = StreamingContext(sc, 50)
+    logging.info("Connecting to host {0}:{1}".format(producer_host, port))
     dstream = strc.socketTextStream(producer_host, port)
     dstream_map = dstream.map(lambda line: line.strip("{}"))\
                         .map(lambda str: str.split(","))\
@@ -45,7 +47,7 @@ def streamingPrice(config, master="local[2]", appName="CurrentPrice" , producer_
                         .map(lambda tuple: (tuple[0].split("+")[0],tuple[1]))
 
     dstream_map.foreachRDD(lambda rdd: send(rdd, config))
-    sc.setLogLevel("INFO")
+    sc.setLogLevel("ERROR")
     dstream_map.pprint()
 
     strc.start()
@@ -56,4 +58,4 @@ def streamingPriceDict(config):
 
 if __name__ == "__main__":
     from config import config
-    streamingPrice(config)
+    streamingPrice(config, producer_host=config['price_streaming']['host'], port=config['price_streaming']['port'])

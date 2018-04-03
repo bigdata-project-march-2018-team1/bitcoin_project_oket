@@ -63,4 +63,5 @@ def produce_stream_current(tcp_ip = "localhost",tcp_port = 9002):
         send_to_spark(last_current,conn,s)
 
 if __name__ == "__main__":
-    produce_stream_current()
+    from config import config
+    produce_stream_current(tcp_ip='0.0.0.0', tcp_port=config['price_streaming']['port'])
