@@ -10,8 +10,8 @@ from elasticsearch import Elasticsearch, helpers
 
 from elastic_storage import http_auth
 
-bitcoinToSatoshi=100000000
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
+BITCOIN_TO_SATOSHI = 100000000
 
 def add_real_time_tx(name,realTimeData):
     """
@@ -32,9 +32,9 @@ def add_real_time_tx(name,realTimeData):
             "_id": int(data['tx_index']),
             "_source":{
                 "type": "real-time",
-                "value": float(data['value'])/bitcoinToSatoshi,
+                "value": float(data['value'])/BITCOIN_TO_SATOSHI,
                 "time": {
-                    'path': data['time'], 
+                    'path': data['time'],
                     'format': DATE_FORMAT
                     }
             }
@@ -53,14 +53,14 @@ def filtre_tx(dico):
         dico {dictionnary} -- contains many informations what need to be filtered
 
     Returns:
-        dictionnary -- filtered liste of dictionnary
+        dictionnary -- filtered dictionnary
     """
-    js=json.loads(dico[1])['x']
-    result = [{
-        'time': timestampsToString(js['time']),
-        'tx_index':js['tx_index'],
-        'value': sum( (js['inputs'][i]['prev_out']['value'] for i in list(range(len(js['inputs'])))) )
-        }]
+    #js=json.loads(dico[1])['x']
+    result = {
+        'time': timestampsToString(dico['time']),
+        'tx_index':dico['tx_index'],
+        'value': sum( (dico['inputs'][i]['prev_out']['value'] for i in list(range(len(dico['inputs'])))) )
+        }
 
     return result
 
@@ -84,7 +84,7 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
     strc = StreamingContext(sc, 5)
 
     kafkaStream = KafkaUtils.createStream(strc, kafkaConsumer_host+':'+str(kafkaConsumer_port), 'SparkStreaming', {topic: 1},valueDecoder=lambda m:json.loads(m.decode('ascii')),kafkaParams = {"metadata.broker.list": 'localhost:9092'})\
-                            .flatMap(filtre_tx)
+                            .map(lambda dico:filtre_tx(json.loads(dico[1])['x']))
 
     kafkaStream.foreachRDD(lambda rdd: add_real_time_tx(index,rdd.collect()))
 
@@ -92,5 +92,5 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
     strc.awaitTermination()
 
 if __name__ == "__main__":
-    connections.create_connection(hosts='localhost', http_auth=http_auth('elastic'))
+    connections.create_connection(hosts='localhost')#, http_auth=http_auth('elastic'))
     consume_Tx_Index('transaction_str','bitcoin_tx')
