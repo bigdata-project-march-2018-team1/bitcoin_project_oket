@@ -160,9 +160,10 @@ def send_to_consumer(start,end,producer):
     for block in list_blocks:
         txs = getListTx_Block(block['id_block'])
         producer.send('test',str(txs).encode())
-        print("Send...")
+        logging.info("INFO")
     producer.close()
 
 if __name__ == "__main__":
+    #TODO bootstrap_servers
     producer = KafkaProducer(acks=1,max_request_size=10000000,bootstrap_servers='localhost:9092')
     send_to_consumer("2018-01-01","2018-02-01",producer)

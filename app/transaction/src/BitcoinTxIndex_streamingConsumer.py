@@ -92,6 +92,5 @@ def consume_Tx_Index(topic,index,master="local[2]", appName="CurrentTransaction"
     strc.awaitTermination()
 
 if __name__ == "__main__":
-    from config import config
     connections.create_connection(hosts='localhost', http_auth=http_auth('elastic'))
     consume_Tx_Index('transaction_str','bitcoin_tx')
