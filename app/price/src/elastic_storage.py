@@ -36,6 +36,13 @@ def eraseData(typ, ind="bitcoin_price"):
     response = s.delete()
     print(response)
 
+def eraseData_date(typ, date_sup, ind="bitcoin_price"):
+    """ Erase data in the database by taking 2 args : type and index"""
+    s = Search(index=ind).query("match", type=typ)\
+                            .query("match", date=date_sup)
+    response = s.delete()
+    print(response)
+
 def http_auth(elastic_conf):
     return "{0}:{1}".format(elastic_conf["username"], elastic_conf["password"])
 

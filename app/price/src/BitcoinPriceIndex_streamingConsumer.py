@@ -1,10 +1,17 @@
+import time
+import datetime
+import logging
+
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 
-from elastic_storage import storeData, BitCoin, eraseData, http_auth
+from elastic_storage import storeData, BitCoin, eraseData, eraseData_date, http_auth
+
+MINUTE_SECONDS = 60
+TIME_FORMAT = '%Y-%m-%dT%H:%M:00'
 
 def send(rdd, config):
     """
@@ -21,7 +28,8 @@ def send(rdd, config):
     if data_tx:
         date=data_tx[0][0]
         value=data_tx[0][1]
-        connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
+        #TODO ou est la clef de l'auth dans config ??
+        connections.create_connection(hosts=config['elasticsearch'], http_auth=http_auth(config['elasticsearch']))
         storeData(date, float(value), "real-time")
 
 def streamingPrice(config, master="local[2]", appName="CurrentPrice" , producer_host="localhost", port=9002):
@@ -57,3 +65,12 @@ def streamingPriceDict(config):
 if __name__ == "__main__":
     from config import config
     streamingPrice(config)
+    #TODO Lancer cette partie dans un thread séparé
+    while True:
+        time.sleep(MINUTE_SECONDS)
+        yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+        yesterday = yesterday.strftime(TIME_FORMAT)
+        try:
+            eraseData_date("real-time", yesterday, ind="bitcoin_price")
+        except:
+            logging.info("no data to erase!")
