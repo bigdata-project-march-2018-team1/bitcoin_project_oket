@@ -80,7 +80,7 @@ def addHistoricalDataset(start, end):
 def insertHistoricalDataInBase(conf):
     ''' Initializes the connection'''
     #TODO ou est la clef de l'auth dans config ??
-    connections.create_connection(hosts=conf['elasticsearch'], http_auth=http_auth(conf['elasticsearch']))
+    connections.create_connection(hosts=conf['elasticsearch']['hosts'], http_auth=http_auth(conf['elasticsearch']))
     ''' Puts the historical data into elasticsearch '''
     addHistoricalDataset("2010-07-17", str(datetime.date.today()))
 
