@@ -151,9 +151,7 @@ def send_to_consumer(start,end,producer):
     list_blocks = getListBlocks_Ndays(start, end)
     for block in list_blocks:
         # Get the first transaction of each block
-        start_time = time.time()
         first_tx=getFirstTx(block['id_block'])
-        print("--- %s seconds ---" % (time.time() - start_time))
         producer.send('miners_hist', str(first_tx).encode())
         logging.info("Sent : First transaction of block "+block['id_block'])
     producer.close()

@@ -45,12 +45,10 @@ def filter_tx(tx):
 
     tx_filtered = {}
     if tx:
-        print(tx)
         tx_filtered['id_tx'] = tx['tx_index']
         tx_filtered['date'] = timestampToDate(tx['time'])
         tx_filtered['value'] = tx['out'][0]['value']
         tx_filtered['addr'] = tx['out'][0]['addr']
-    print("Filtered : "+str(tx_filtered))
     return tx_filtered
 
 def timestampToDate(timestamp):
@@ -103,7 +101,6 @@ def HistoricalMiners(config, master="local[2]", appName="Historical Transaction"
         .map(lambda v: ast.literal_eval(v[1]))\
         .map(filter_tx)
     dstream.foreachRDD(lambda rdd: send(rdd, config))
-    dstream.pprint()
     ssc.start()
     ssc.awaitTermination()
 
