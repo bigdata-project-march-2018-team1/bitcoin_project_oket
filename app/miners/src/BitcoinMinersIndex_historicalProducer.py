@@ -120,21 +120,6 @@ def filter_listBlocks(listBlocks):
         res.append(currentblock)
     return res
 
-def getListTx_Block(block, host=DEFAULT_HOST, path=URI_TRANSACTIONS):
-    """ Get transactions for a block
-    
-    Arguments:
-        block {string} -- Block id
-    
-    Keyword Arguments:
-        host {string} -- API host (default: {DEFAULT_HOST})
-        path {string} -- API uri (default: {URI_TRANSACTIONS})
-    
-    Returns:
-        list -- Return all informations about transactions in a block
-    """
-
-    return connectionToAPI(host, path + str(block))
 
 def getFirstTx(block_id, host=DEFAULT_HOST, path=URI_TRANSACTIONS):
     """ Get the first transaction of a block
@@ -147,24 +132,12 @@ def getFirstTx(block_id, host=DEFAULT_HOST, path=URI_TRANSACTIONS):
         path {string} -- API uri (default: {URI_TRANSACTIONS})
 
     Returns:
-        json -- hash of the first transaction
+        json -- first transaction in the block
     """
     res = connectionToAPI(host, path + str(block_id))
-    print (res['tx'][0])
+    logging.info ("Transaction : "+str(res['tx'][0]))
     return (res['tx'][0])
 
-
-
-def block_test():
-    """ Create a small block (only 5 transactions) for testing
-    
-    Returns:
-        json -- Return a small block
-    """
-
-    test_blk = getListTx_Block('0000000000000bae09a7a393a8acded75aa67e46cb81f7acaa5ad94f9eacd103')
-    del test_blk['tx'][5:]
-    return test_blk
 
 def send_to_consumer(start,end,producer):
     """ Send blocks created between start and end to kafka
@@ -178,14 +151,16 @@ def send_to_consumer(start,end,producer):
     list_blocks = getListBlocks_Ndays(start, end)
     for block in list_blocks:
         # Get the first transaction of each block
+        start_time = time.time()
         first_tx=getFirstTx(block['id_block'])
-     #   txs = getListTx_Block(block['id_block'])
-        producer.send('test', str(first_tx).encode())
-        logging.info("INFO")
+        print("--- %s seconds ---" % (time.time() - start_time))
+        producer.send('miners_hist', str(first_tx).encode())
+        logging.info("Sent : First transaction of block "+block['id_block'])
     producer.close()
+    logging.info("End of miners addition, producer closed.")
+
 
 if __name__ == "__main__":
     from config import config
     producer = KafkaProducer(acks=1,max_request_size=10000000)#,bootstrap_servers=config['kafka']['host']+':'+config['kafka']['port'])
-    send_to_consumer("2018-04-01","2018-04-02", producer)
-    getFirstTx("0000000000000000001b823d6bc79a8ba1405f6967045e702946703a993219a7")
+    send_to_consumer("2018-04-01","2018-04-01", producer)
