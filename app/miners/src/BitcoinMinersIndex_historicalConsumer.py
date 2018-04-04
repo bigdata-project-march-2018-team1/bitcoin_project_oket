@@ -24,8 +24,9 @@ def add_historical_miners(historicalDataset, satochiToBitcoin=100000000):
             "_id": data['id_tx'],
             "_source": {
                 "type": "historical",
+                "time": {'path': data['date'], 'format': TIME_FORMAT},
                 "value": data['value']/satochiToBitcoin,
-                "time": {'path': data['date'], 'format': TIME_FORMAT}
+                "addr": data["addr"]
             }
         }
         for data in historicalDataset
@@ -39,7 +40,7 @@ def filter_tx(tx):
         tx -- First transaction of a block
     
     Returns:
-        dict -- Return only id, date, value and addr
+        dict -- Return the transaction id, date, value and addr
     """
 
     tx_filtered = {}
@@ -78,9 +79,9 @@ def send(rdd, config):
     data_tx = rdd.collect()
     if data_tx:
         connections.create_connection(
-            hosts=config['elasticsearch'], http_auth=http_auth('elastic'))
+            hosts=config['elasticsearch']['hosts'], http_auth=http_auth('elastic'))
         add_historical_miners(data_tx)
-        logging.info("INFO")
+        logging.info("Data sent to Elastic")
 
 def HistoricalMiners(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='miners_hist', producer_host="localhost", producer_port='2181', db_host="localhost"): 
     """ Load miners data from kafka, filter and send it to elastic
@@ -99,9 +100,9 @@ def HistoricalMiners(config, master="local[2]", appName="Historical Transaction"
     sc = SparkContext(master,appName)
     ssc = StreamingContext(sc,batchDuration=5)
     dstream = KafkaUtils.createStream(ssc,producer_host+":"+producer_port,group_id,{topicName:1},kafkaParams={"fetch.message.max.bytes":"1000000000"})\
-                        .map(lambda v: ast.literal_eval(v[1]))\
-                        .map(filter_tx)
-   # dstream.foreachRDD(lambda rdd: send(rdd, config))
+        .map(lambda v: ast.literal_eval(v[1]))\
+        .map(filter_tx)
+    dstream.foreachRDD(lambda rdd: send(rdd, config))
     dstream.pprint()
     ssc.start()
     ssc.awaitTermination()

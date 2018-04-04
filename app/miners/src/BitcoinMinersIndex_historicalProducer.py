@@ -163,4 +163,4 @@ def send_to_consumer(start,end,producer):
 if __name__ == "__main__":
     from config import config
     producer = KafkaProducer(acks=1,max_request_size=10000000)#,bootstrap_servers=config['kafka']['host']+':'+config['kafka']['port'])
-    send_to_consumer("2018-04-01","2018-04-01", producer)
+    send_to_consumer("2018-04-01","2018-04-04", producer)
