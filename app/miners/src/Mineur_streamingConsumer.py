@@ -8,7 +8,7 @@ import datetime
 from elasticsearch_dsl.connections import connections
 from elasticsearch import Elasticsearch, helpers
 from BitcoinMinersIndex_historicalConsumer import filter_tx
-from BitcoinMinersIndex_historicalProducer import getFirstTx
+from BitcoinMinersIndex_historicalProducer import getFirstTx# enlever
 from elastic_storage import http_auth
 
 import logging
@@ -16,43 +16,6 @@ import logging
 TIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 BITCOIN_TO_SATOSHI = 100000000
 
-#la
-import time
-
-#fin
-def add_real_time_tx(name,realTimeData):
-    """
-    Add the data contains in 'realTimeData' to ElasticSearchBase of table indice 'index'.
-
-    Arguments:
-        realTimeData { list[directories] } -- list of dictionnary
-        index {string} -- name of indice of ElasticDataBase
-
-        Returns:
-        void -- Put data to ElasticDataBase
-    """
-
-    millis = int(round(time.time() * 1000))
-    actions = [
-        {
-            "_index": name,
-            "_type": "doc",
-            "_id": int(data['tx_index']),
-            "_source":{
-                "mineur_id": int(data['mineur_id']),
-                "type": "real-time",
-                "value": float(data['value'])/BITCOIN_TO_SATOSHI,
-                "time": {
-                    'path': data['time'],
-                    'format': DATE_FORMAT
-                    }
-            }
-        }
-        for data in realTimeData
-    ]
-    helpers.bulk(connections.get_connection(), actions)
-    print("time elas est:")
-    print(int(round(time.time() * 1000))-millis)
 
 def timestampsToString(timestamps):
     return str(datetime.datetime.fromtimestamp(int(timestamps)).strftime(DATE_FORMAT))
@@ -62,22 +25,16 @@ def filtre_miner(block_id):
     """ Filter just after the input of the streaming to get the time, the value and the tx_index of each transaction.
 
     Arguments:
-        dico {dictionnary} -- contains many informations what need to be filtered
+        block_id {string} -- id of block to get.
 
     Returns:
-        dictionnary -- filtered dictionnary
+        json -- block of id id
     """
     first_tx=getFirstTx(block_id)
-    print("test critic")
-    print(type(first_tx))
-    print(first_tx)
     return filter_tx(first_tx)
 
 def convert(m):
-    millis=int(round(time.time() * 1000))
     mbis=json.loads(m.decode('ascii'))
-    print("time convert est:")
-    print(int(round(time.time() * 1000))-millis)
     return mbis
 
 def send(rdd, config):
@@ -96,6 +53,7 @@ def send(rdd, config):
             hosts=config['elasticsearch']['hosts'], http_auth=http_auth('elastic'))
         add_streaming_miners(data_tx)
         logging.info("Data sent to Elastic")
+
 def add_streaming_miners(dataset):
     ''' Get data from the API between two dates '''
     ''' Call to bulk api to store the data '''
@@ -130,18 +88,15 @@ def consume_Tx_Index(config,topic,index,master="local[2]", appName="CurrentTrans
         void -- Send to ElasticSearchDataBase data.
     """
     sc = SparkContext(master, appName)
-    strc = StreamingContext(sc, 60)
+    strc = StreamingContext(sc, 30)
 
-    millis=int(round(time.time() * 1000))
-    kafkaStream = KafkaUtils.createStream(strc, kafkaConsumer_host+':'+str(kafkaConsumer_port), 'SparkStreaming', {topic: 1},valueDecoder=lambda m:convert(m))#.pprint()#,kafkaParams = {"metadata.broker.list": 'localhost:9092'})\
-    #kafkaStream.pprint()
-    #print("la")
-    filtre=kafkaStream.map(lambda block:filtre_miner(json.loads(block[1])['x']['hash']))
-    elastic=filtre.foreachRDD(lambda rdd: send(rdd, config))
-    #print("time kafkastream est:")
-    #print(int(round(time.time() * 1000))-millis)
+    kafkaStream = KafkaUtils.createStream(strc, kafkaConsumer_host+':'+str(kafkaConsumer_port), 'SparkStreaming', {topic: 1})
 
-    #kafkaStream.foreachRDD(lambda rdd: add_real_time_tx(index,rdd.collect()))
+    json_data=kafkaStream.map(lambda block:json.loads(block[1]))
+
+    get_data=json_data.map(filter_tx)
+
+    elastic=get_data.foreachRDD(lambda rdd: send(rdd, config))
 
     strc.start()
     strc.awaitTermination()
