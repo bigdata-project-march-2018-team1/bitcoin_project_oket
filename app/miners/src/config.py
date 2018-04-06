@@ -3,7 +3,7 @@ import elastic_config
 
 config = {
     'elasticsearch': {
-        'hosts': ['localhost'], # TODO put it in elasticsearch_config
+        'hosts': ['db'], # TODO put it in elasticsearch_config
         'username': 'elastic',
         'password': elastic_config.password
     },
