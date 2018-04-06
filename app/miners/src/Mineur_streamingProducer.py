@@ -29,7 +29,7 @@ def produce_Block_Index(topic):
 
         getFirstTx = connectionToAPI(DEFAULT_HOST, URI_TRANSACTIONS + str(id_hash))
         # there are transaction that don't have the 'tx' field: so in case of that, I manage this.
-        if getFirstTx['tx']:
+        if getFirstTx.has_key('tx'):
             producer.send(topic,getFirstTx['tx'][0])
             print(".",end="",flush=True)
         else:
