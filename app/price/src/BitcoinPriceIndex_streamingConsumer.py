@@ -1,19 +1,20 @@
-import time
-import datetime
 import logging
+import ast
+import datetime
 
-from pyspark import SparkContext
+from pyspark import SparkContext, SparkConf
 from pyspark.streaming import StreamingContext
 
-from elasticsearch import Elasticsearch
+from pyspark.streaming.kafka import KafkaUtils
+
+from elasticsearch import Elasticsearch, helpers
 from elasticsearch_dsl.connections import connections
 
-from elastic_storage import storeData, BitCoin, eraseData, eraseData_date, http_auth
+from elastic_storage import storeData, BitCoin, eraseData, http_auth
 
-MINUTE_SECONDS = 60
 TIME_FORMAT = '%Y-%m-%dT%H:%M:00'
 
-def send(rdd, config):
+def send(rdd):
     """
      Send the rdd, that's an information passed at argument of "send" function, to our elastic database.
 
@@ -26,13 +27,11 @@ def send(rdd, config):
     """
     data_tx=rdd.collect()
     if data_tx:
-        date=data_tx[0][0]
-        value=data_tx[0][1]
-        #TODO ou est la clef de l'auth dans config ??
-        connections.create_connection(hosts=config['elasticsearch'], http_auth=http_auth(config['elasticsearch']))
+        date = data_tx[0]['date']
+        value = data_tx[0]['value']
         storeData(date, float(value), "real-time")
 
-def streamingPrice(config, master="local[2]", appName="CurrentPrice" , producer_host="localhost", port=9002):
+def streamingPrice(config, master="local[2]", appName="CurrentPrice", group_id='Alone-In-The-Dark', topicName='price_str', producer_host="zookeeper", producer_port='2181'):
     """
     Create a Spark Streaming which listening in hostname:port, get a text from a socket server and then print it and send it to our elastic data base every 60 secondes.
 
@@ -42,19 +41,17 @@ def streamingPrice(config, master="local[2]", appName="CurrentPrice" , producer_
         producer_host {string} -- [description]
         db_host {string} -- [description]
         port {int} -- [description]
-
     """
     sc = SparkContext(master, appName)
-    strc = StreamingContext(sc, 50)
-    dstream = strc.socketTextStream(producer_host, port)
-    dstream_map = dstream.map(lambda line: line.strip("{}"))\
-                        .map(lambda str: str.split(","))\
-                        .map(lambda line: (line[0].split(":",1)[1].strip('\" '), line[1].split(":")[1].strip('\" ')))\
-                        .map(lambda tuple: (tuple[0].split("+")[0],tuple[1]))
+    strc = StreamingContext(sc, 60)
+    logging.info("Connecting to host {0}:{1}".format(producer_host, producer_port))
 
-    dstream_map.foreachRDD(lambda rdd: send(rdd, config))
-    sc.setLogLevel("INFO")
-    dstream_map.pprint()
+    dstream = KafkaUtils.createStream(strc,producer_host+":"+producer_port,group_id,{topicName:1},kafkaParams={"fetch.message.max.bytes":"1000000000"})\
+            .map(lambda v: ast.literal_eval(v[1]))
+
+    dstream.pprint()
+            
+    dstream.foreachRDD(lambda rdd: send(rdd))
 
     strc.start()
     strc.awaitTermination()
@@ -64,13 +61,5 @@ def streamingPriceDict(config):
 
 if __name__ == "__main__":
     from config import config
+    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
     streamingPrice(config)
-    #TODO Lancer cette partie dans un thread séparé
-    while True:
-        time.sleep(MINUTE_SECONDS)
-        yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-        yesterday = yesterday.strftime(TIME_FORMAT)
-        try:
-            eraseData_date("real-time", yesterday, ind="bitcoin_price")
-        except:
-            logging.info("no data to erase!")

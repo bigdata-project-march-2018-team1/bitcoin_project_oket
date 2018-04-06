@@ -13,49 +13,50 @@ from elastic_storage import storeData, eraseData, BitCoin, http_auth, connection
 
 DEFAULT_HOST = "api.coindesk.com"
 DEFAULT_URI_DATE = "/v1/bpi/historical/close.json?currency=EUR"
-DAY_SECONDS = 86400
+HOUR_SECONDS = 3600
 
 def getHistoricalPrice(start, end, host=DEFAULT_HOST, path=DEFAULT_URI_DATE):
     """ Call the API to get all the bitcoin values between two dates
     
     Arguments:
-        start {string} -- Start date
-        end {string} -- End date
+        start {string} -- [description]
+        end {string} -- [description]
     
     Keyword Arguments:
-        host {string} -- API host (default: {DEFAULT_HOST})
-        path {string} -- API path (default: {DEFAULT_URI_DATE})
+        host {string} -- [description] (default: {DEFAULT_HOST})
+        path {string} -- [description] (default: {DEFAULT_URI_DATE})
     
     Returns:
-        json -- Return all API's data (price, date,...)
+        json -- [description]
     """
 
     return connectionToAPI(host, path+"&start="+start+"&end="+end)
 
 def createHistoricalDataset(jsonData):
-    """ Creates a filtered list from all API's data 
+    """ Creates a list from the json data
     
     Arguments:
-        jsonData {json} -- Data received from the coindesk API
+        jsonData {json} -- [description]
     
     Returns:
-        list -- Return a list of filter day's price
+        list -- [description]
     """
 
     list = []
-    for key, val in jsonData['bpi'].items():
-        tempDic = {}
-        tempDic['date'] = key+"T23:59:00"
-        tempDic['value'] = val
-        list.append(tempDic)
+    if jsonData:
+        for key, val in jsonData['bpi'].items():
+            tempDic = {}
+            tempDic['date'] = key+"T09:00:00"
+            tempDic['value'] = val
+            list.append(tempDic)
     return list
 
 def addHistoricalDataset(start, end):
     """ Add data from the API between two dates to Elastic
     
     Arguments:
-        start {string} -- Start date
-        end {string} -- End date
+        start {string} -- [description]
+        end {string} -- [description]
     """
 
     try:
@@ -64,31 +65,32 @@ def addHistoricalDataset(start, end):
         logging.info("no data to erase!")
     jsonDataH = getHistoricalPrice(start, end)
     historicalDataset = createHistoricalDataset(jsonDataH)
-    ''' Call to bulk api to store the data '''
-    actions = [
-        {
-            "_index": "bitcoin_price",
-            "_type": "doc",
-            "date": data['date'],
-            "value": data['value'],
-            "type": "historical"
-        }
-        for data in historicalDataset
-    ]
-    helpers.bulk(connections.get_connection(), actions)
+    if historicalDataset:
+        ''' Call to bulk api to store the data '''
+        actions = [
+            {
+                "_index": "bitcoin_price",
+                "_type": "doc",
+                "date": data['date'],
+                "value": data['value'],
+                "type": "historical"
+            }
+            for data in historicalDataset
+        ]
+        helpers.bulk(connections.get_connection(), actions)
 
-def insertHistoricalDataInBase(conf):
-    ''' Initializes the connection'''
-    #TODO ou est la clef de l'auth dans config ??
-    connections.create_connection(hosts=conf['elasticsearch']['hosts'], http_auth=http_auth(conf['elasticsearch']))
+def insertHistoricalDataInBase():
     ''' Puts the historical data into elasticsearch '''
     addHistoricalDataset("2010-07-17", str(datetime.date.today()))
 
 if __name__ == "__main__":
     from config import config
-    insertHistoricalDataInBase(config)
-    while True:
-        time.sleep(DAY_SECONDS)
-        today = str(datetime.date.today())
-        addHistoricalDataset(today, today)
-        logging.info("INFO")
+    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
+    insertHistoricalDataInBase()
+    while True: 
+        time.sleep(HOUR_SECONDS)
+        if datetime.datetime.now().hour == 2:
+            today = str(datetime.date.today())
+            addHistoricalDataset(today, today)
+            logging.info("INFO")
+            eraseData("real-time")
