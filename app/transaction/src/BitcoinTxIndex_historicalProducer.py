@@ -159,11 +159,11 @@ def send_to_consumer(start,end,producer):
     list_blocks = getListBlocks_Ndays(start, end)
     for block in list_blocks:
         txs = getListTx_Block(block['id_block'])
-        producer.send('test',str(txs).encode())
+        producer.send('transaction_hist',str(txs).encode())
         logging.info("INFO")
     producer.close()
 
 if __name__ == "__main__":
-    from config import config
-    producer = KafkaProducer(acks=1,max_request_size=10000000,bootstrap_servers=config['kafka']['host']+':'+config['kafka']['port'])
-    send_to_consumer("2018-01-01","2018-02-01",producer)
+    #TODO bootstrap_servers
+    producer = KafkaProducer(acks=1,max_request_size=10000000,bootstrap_servers='kafka:9092')
+    send_to_consumer("2017-09-01","2018-04-05",producer)

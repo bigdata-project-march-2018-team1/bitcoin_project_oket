@@ -70,7 +70,7 @@ def timestampToDate(timestamp):
     return datetime.datetime.fromtimestamp(
                 int(timestamp)).strftime(TIME_FORMAT)
 
-def send(rdd, config):
+def send(rdd):
     """ Send to elastic
     
     Arguments:
@@ -82,8 +82,6 @@ def send(rdd, config):
 
     data_tx = rdd.collect()
     if data_tx:
-        connections.create_connection(
-            hosts=config['elasticsearch'], http_auth=http_auth('elastic'))
         add_historical_tx(data_tx[0])
         logging.info("INFO")
 
@@ -106,11 +104,15 @@ def HisticalTx(config, master="local[2]", appName="Historical Transaction", grou
     dstream = KafkaUtils.createStream(ssc,producer_host+":"+producer_port,group_id,{topicName:1},kafkaParams={"fetch.message.max.bytes":"1000000000"})\
                         .map(lambda v: ast.literal_eval(v[1]))\
                         .map(filter_tx)
-    dstream.foreachRDD(lambda rdd: send(rdd, config))
+
+    dstream.pprint()
+    
+    dstream.foreachRDD(lambda rdd: send(rdd))
     
     ssc.start()
     ssc.awaitTermination()
 
 if __name__ == "__main__":
     from config import config    
+    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
     HisticalTx(config)
