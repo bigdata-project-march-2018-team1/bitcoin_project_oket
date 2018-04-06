@@ -76,12 +76,10 @@ def send(rdd, config):
 
     data_tx = rdd.collect()
     if data_tx:
-        connections.create_connection(
-            hosts=config['elasticsearch']['hosts'], http_auth=http_auth('elastic'))
         add_historical_miners(data_tx)
         logging.info("Data sent to Elastic")
 
-def HistoricalMiners(config, master="local[2]", appName="Historical Transaction", group_id='Alone-In-The-Dark', topicName='miners_hist', producer_host="localhost", producer_port='2181', db_host="localhost"): 
+def HistoricalMiners(config, master="local[2]", appName="Historical Miners", group_id='Alone-In-The-Dark', topicName='miners_hist', producer_host="zookeeper", producer_port='2181', db_host="db"): 
     """ Load miners data from kafka, filter and send it to elastic
     
     Keyword Arguments:
@@ -100,10 +98,15 @@ def HistoricalMiners(config, master="local[2]", appName="Historical Transaction"
     dstream = KafkaUtils.createStream(ssc,producer_host+":"+producer_port,group_id,{topicName:1},kafkaParams={"fetch.message.max.bytes":"1000000000"})\
         .map(lambda v: ast.literal_eval(v[1]))\
         .map(filter_tx)
+
+    dstream.pprint()
+
     dstream.foreachRDD(lambda rdd: send(rdd, config))
+    
     ssc.start()
     ssc.awaitTermination()
 
 if __name__ == "__main__":
     from config import config
+    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
     HistoricalMiners(config)

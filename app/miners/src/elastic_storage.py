@@ -37,8 +37,8 @@ def eraseData(typ, ind="bitcoin_price"):
     print(response)
 
 def http_auth(elastic_conf):
-    return "'elastic':'password'"
- #   return "{0}:{1}".format(elastic_conf["username"], elastic_conf["password"])
+    #return "'elastic':'password'"
+    return "{0}:{1}".format(elastic_conf["username"], elastic_conf["password"])
 
 def connectionToAPI(host, path):
     """ Connection to the API
