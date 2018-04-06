@@ -3,7 +3,7 @@ import elastic_config
 
 config = {
     'elasticsearch': {
-        'hosts': ['db'], # TODO put it in elasticsearch_config
+        'hosts': ['db'],
         'username': 'elastic',
         'password': elastic_config.password
     },
@@ -24,7 +24,7 @@ config = {
     },
     'topic_config': {
         'group_id': 'transaction',
-        'topic_name': 'transaction_historical' # TODO auto gen on build!
+        'topic_name': 'transaction_historical'
     }
 }
 

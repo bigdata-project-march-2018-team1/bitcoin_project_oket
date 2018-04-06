@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
-import tweepy
-from tweepy.streaming import StreamListener
-from tweepy import OAuthHandler
 
 import json
 import re
-import numpy as np
 import datetime
 import time
 
-from nltk.corpus import stopwords
 
 from http import client as httpClient
 from http import HTTPStatus
@@ -39,38 +34,7 @@ def connectionToTwitterAPI():
     auth.set_access_token(access_token, access_token_secret)
     return listener, auth
 
-class StdOutListener(StreamListener):
-    """ A listener handles tweets are the received from the stream. 
-    This is a basic listener that just prints received tweets to stdout.
-
-    """
-
-    def __init__(self):
-        self.tweet = ""
-
-    def on_data(self, data):
-        self.tweet = json.loads(data)['text']
-        return True
-
-    def on_error(self, status):
-        print(status)
-
-def getTweets(auth, date_since):
-    api = tweepy.API(auth)
-    search_terms = "#bitcoin"
-    for tweet in tweepy.Cursor(api.search,\
-                        q=search_terms,\
-                        since=date_since,\
-                        lan="en",
-                        count='10')\
-                        .items():
-        current_tweet = {}
-        current_tweet['date'] = tweet.created_at
-        current_tweet['text'] = tweet.text
-        yield current_tweet
-
 DEFAULT_HOST = "newsapi.org"
-
 def getGoogleArticle(date,host=DEFAULT_HOST):
     connection = httpClient.HTTPConnection(host)
     current = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%S") - datetime.timedelta(days=1)
@@ -86,6 +50,7 @@ def getGoogleArticle(date,host=DEFAULT_HOST):
     return result
 
 def cleaningText(tweet):
+    from nltk.corpus import stopwords
     tweet_lower = tweet.lower()
     tweet_nonAlpha = re.sub('[^a-zA-Z@# ]','',tweet_lower)
     tweet_split = tweet_nonAlpha.split(' ')
@@ -97,13 +62,6 @@ def cleaningText(tweet):
             tweet_clean.append(word)
     return tweet_clean
 
-'''def getVADERscores(tweets):
-    scores_vader = []
-    analyzer = SentimentIntensityAnalyzer()
-    for tw in tweets:
-        scores_vader.append(float(analyzer.polarity_scores(tw['contains'])['compound']))
-    return scores_vader'''
-
 def getResponseVariables(date):
     end = stringToDatetime(date) + datetime.timedelta(days=1)
     jsonDataH = getHistoricalPrice(date[0:10],end.strftime('%Y-%m-%d'))
@@ -112,26 +70,31 @@ def getResponseVariables(date):
     for i in range(len(historicalDataset_sorted)-1):
         diff = historicalDataset_sorted[i+1]['value'] - historicalDataset_sorted[i]['value']
         if diff <= 0:
-            if abs(diff/historicalDataset_sorted[i]['value']) <= 0.1:
+            if abs(diff/historicalDataset_sorted[i]['value']) <= 0.02:
                 Y = 0
-            if abs(diff/historicalDataset_sorted[i]['value']) > 0.1:
+            elif abs(diff/historicalDataset_sorted[i]['value']) > 0.1:
                 Y = 1
-        if diff > 0:
-            if abs(diff/historicalDataset_sorted[i]['value']) <= 0.1:
+            elif abs(diff/historicalDataset_sorted[i]['value']) <= 0.1:
                 Y = 2
-            if abs(diff/historicalDataset_sorted[i]['value']) > 0.1:
+        else:
+            if abs(diff/historicalDataset_sorted[i]['value']) <= 0.02:
+                Y = 0
+            elif abs(diff/historicalDataset_sorted[i]['value']) > 0.1:
                 Y = 3
+            elif abs(diff/historicalDataset_sorted[i]['value']) <= 0.1:
+                Y = 4
     return Y
 
 def getCorpusPerDate(date):
     articles = getGoogleArticle(date)
     corpus = []
     date_publication = ()
-    for art in articles['articles']:
-        if art['description'] != None:
-            description = art['description']
-            date_publication = date_publication + (art['publishedAt'],)
-            corpus = corpus + cleaningText(description)
+    if articles:
+        for art in articles['articles']:
+            if art['description'] != None:
+                description = art['description']
+                date_publication = date_publication + (art['publishedAt'],)
+                corpus = corpus + cleaningText(description)
     return corpus
 
 def stringToDatetime(date):
@@ -193,33 +156,41 @@ def predict_today(sc,spark,pipeline_model):
     return predict
 
 def add_predict(df):
-    pred = df.select(df['label_index_predicted']).rdd.collect()
+    pred = df.select(df['label_index_predicted']).rdd.first()
     if pred:
-        if pred[0] == 0:
-            prediction="Down"
-        if pred[0] == 1:
-            prediction="Down10"
-        if pred[0] == 2:
-            prediction="Up"
-        if pred[0] == 3:
-            prediction="Up10"
+        pred_int = int(pred.label_index_predicted)
+        if pred_int == 0:
+            prediction="Low probability to change"
+        elif pred_int  == 1:
+            prediction="Down 10%"
+        elif pred_int  == 2:
+            prediction="Down 2%-10%"
+        elif pred_int  == 3:
+            prediction="Up 2%-10%"
+        elif pred_int == 4:
+            prediction="Up 10%"
+        else:
+            prediction="Unable to predict!"
         today = datetime.datetime.today()
-        today_str = datetime.datetime.strftime(today, "%Y-%m-%dT%H:%M:%S")
+        today_str = datetime.datetime.strftime(today, "%Y-%m-%d")
         doc = { 'date': today_str, 'prediction': prediction }
-        connections.get_connection().index(index="bitcoin_pred", doc_type="doc", _id=1, body=doc)
+        connections.get_connection().index(index="bitcoin_pred", doc_type="doc", id=1, body=doc)
 
 def main():
+    import nltk
+    nltk.download('stopwords')
+
     sc = SparkContext()
     spark = SparkSession(sc)
     
-    corpus = getCorpus_between_2_dates("2018-03-01T23:59:00", "2018-03-29T23:59:00")
+    corpus = getCorpus_between_2_dates("2018-01-15T23:59:00", "2018-04-04T23:59:00")
 
     rdd = sc.parallelize(corpus).map(lambda v: Row(text=v[0],label=v[1],date=v[2]))
     df = spark.createDataFrame(rdd)
 
     df.show()
 
-    df_train, df_test = df.randomSplit([0.6,0.4])
+    df_train, df_test = df.randomSplit([0.7,0.3])
 
     pipeline_model = create_model()
 
@@ -230,18 +201,17 @@ def main():
 
     evaluator = MulticlassClassificationEvaluator(labelCol="label_index", predictionCol="label_index_predicted", metricName="accuracy")
     accuracy = evaluator.evaluate(predict)
-    #print("Accuracy: ", str(accuracy))
+    print("Accuracy: ", str(accuracy))
 
     #pipeline_model = PipelineModel.load("./model")
 
     predict = predict_today(sc,spark,model)
     predict.show()
 
-    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth('elastic'))
+    connections.create_connection(hosts=config['elasticsearch']['hosts'], http_auth=http_auth(config['elasticsearch']))
     add_predict(predict)
 
 if __name__ == "__main__":
-    main()
-    '''while True:
+    while True:
         main()
-        time.sleep(84600)'''
+        time.sleep(84600)
