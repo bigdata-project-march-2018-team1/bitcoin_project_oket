@@ -15,7 +15,7 @@ services:
                 - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
                 - PYTHON_MODULE=price
             context: app
-        command: spark-submit src/BitcoinPriceIndex_streamingConsumer.py
+        command: ['spark-submit', '--packages',  'org.apache.spark:spark-streaming-kafka-0-8-assembly_2.11:2.3.0', 'src/BitcoinPriceIndex_streamingConsumer.py']
         networks:
             - backend
             - kafka_net
@@ -23,21 +23,19 @@ services:
             - price_streaming_producer
             - kafka
             - db
+        restart: on-failure
     price_streaming_producer:
         build:
             args:
-                - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
                 - PYTHON_MODULE=price
             context: app
         command: python3 src/BitcoinPriceIndex_streamingProducer.py
         networks:
-            - backend
+            - kafka_net
         depends_on:
             - kafka
-    price_streaming:
-        # start both consumer and producer for streaming
-        image: tianon/true
-        restart: "no"
-        depends_on:
-            - price_streaming_consumer
-            - price_streaming_producer
+        restart: on-failure
+networks:
+    kafka_net:
+    backend:
+
